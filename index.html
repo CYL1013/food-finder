@@ -3,235 +3,352 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#c2410c">
+<meta name="theme-color" content="#f3f4f1">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="吃什麼">
 <title>吃什麼</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #faf7f2; --panel: #ffffff; --ink: #1f1a17; --muted: #7a6f66;
-    --line: #ece5dc; --accent: #c2410c; --accent-soft: #fdecdf;
-    --open: #15803d; --closed: #b91c1c; --star: #e0a100;
-    --radius: 12px;
+    --bg: #f3f4f1;        /* 瓷白 */
+    --paper: #ffffff;
+    --ink: #1b1d1c;       /* 墨 */
+    --muted: #7c817d;
+    --hair: #e2e4e0;
+    --jade: #2f5d50;      /* 青瓷 */
+    --jade-soft: #e6eeea;
+    --rose: #a5554a;
+    --gold: #a07a2c;
+    --serif: "Noto Serif TC", "Songti TC", serif;
+    --sans: "Noto Sans TC", -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    --ease: cubic-bezier(.2,.7,.2,1);
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; }
-  body {
-    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-    background: var(--bg); color: var(--ink); font-size: 15px;
-  }
-  .app { display: grid; grid-template-columns: 420px 1fr; height: 100dvh; }
-  #map { width: 100%; height: 100%; }
-  .side { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--line); }
+  body { font-family: var(--sans); background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.5; font-feature-settings: "tnum"; }
+  button, select, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; }
+  [hidden] { display: none !important; }
 
-  /* 控制區 */
-  .controls { padding: 14px 16px 10px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
-  .title { display: flex; align-items: center; justify-content: space-between; }
-  .title h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+  .app { display: grid; grid-template-columns: 412px 1fr; height: 100dvh; }
+  .mapwrap { position: relative; }
+  #map { position: absolute; inset: 0; }
+  .side { display: flex; flex-direction: column; min-height: 0; background: var(--paper); box-shadow: 1px 0 0 var(--hair); z-index: 1; }
+
+  /* ---------- 頂部 ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between; padding: 22px 24px 4px; }
+  .brand { font-family: var(--serif); font-weight: 700; font-size: 26px; letter-spacing: .12em; margin: 0; }
+  .head-right { display: flex; align-items: center; gap: 10px; }
   .usage { font-size: 12px; color: var(--muted); }
-  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
-  .seg button { border: 0; background: transparent; padding: 6px 11px; font: inherit; font-size: 14px; cursor: pointer; color: var(--ink); }
-  .seg button.on { background: var(--accent); color: #fff; }
-  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 11px; font: inherit; font-size: 14px; cursor: pointer; }
-  .chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-  .origin-label { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .slider { display: flex; align-items: center; gap: 10px; }
-  .slider input { flex: 1; accent-color: var(--accent); }
-  .slider b { min-width: 58px; text-align: right; }
-  .go { background: var(--accent); color: #fff; border: 0; border-radius: var(--radius); padding: 10px; font: inherit; font-weight: 600; font-size: 16px; cursor: pointer; }
-  .go:disabled { opacity: .55; cursor: default; }
-  .toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
-  select { font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; background: #fff; }
-  label.check { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; display: grid; place-items: center; color: var(--muted); }
+  .icon-btn:hover { background: var(--bg); color: var(--ink); }
 
-  /* 列表 */
-  .list { overflow-y: auto; flex: 1; min-height: 0; }
-  .msg { padding: 24px 18px; color: var(--muted); text-align: center; line-height: 1.6; }
-  .msg.err { color: var(--closed); white-space: pre-line; }
-  .card { padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; gap: 3px; }
-  .card:hover, .card.hl { background: #fbf6ef; }
-  .card .name { font-weight: 600; font-size: 16px; }
-  .meta { font-size: 13px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
-  .star { color: var(--star); }
-  .open { color: var(--open); } .closed { color: var(--closed); }
+  /* ---------- 條件 ---------- */
+  .controls { padding: 8px 24px 18px; display: grid; gap: 18px; }
+  .field { display: grid; gap: 8px; }
+  .field > .label { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+  .origin-now { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -2px; }
+
+  .tabs { display: flex; gap: 2px; padding: 3px; background: var(--bg); border-radius: 10px; }
+  .tabs button { flex: 1; border: 0; background: transparent; padding: 7px 0; border-radius: 8px; font-size: 14px; color: var(--muted); transition: background .2s var(--ease), color .2s; }
+  .tabs button[aria-pressed="true"] { background: var(--paper); color: var(--ink); font-weight: 500; box-shadow: 0 1px 2px rgba(27,29,28,.08); }
+
+  .reach { display: flex; align-items: center; gap: 16px; }
+  .reach-num { font-family: var(--serif); font-size: 40px; line-height: 1; font-weight: 500; min-width: 2ch; text-align: right; }
+  .reach-unit { font-size: 13px; color: var(--muted); margin-left: -10px; align-self: flex-end; padding-bottom: 4px; }
+  input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 2px; background: var(--hair); border-radius: 2px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); border: 4px solid var(--paper); box-shadow: 0 0 0 1px var(--ink); }
+  input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--ink); border: 4px solid var(--paper); box-shadow: 0 0 0 1px var(--ink); }
+
+  .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 -24px; padding: 0 24px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; border: 1px solid var(--hair); background: var(--paper); padding: 5px 12px; border-radius: 999px; font-size: 14px; white-space: nowrap; transition: all .2s var(--ease); }
+  .chip:hover { border-color: #c9ccc7; }
+  .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+
+  .actions { display: flex; gap: 8px; }
+  .primary { flex: 1; border: 0; background: var(--ink); color: var(--paper); padding: 13px; border-radius: 12px; font-weight: 500; font-size: 15px; letter-spacing: .08em; transition: opacity .2s; }
+  .primary:disabled { opacity: .35; cursor: default; }
+  .ghost { border: 1px solid var(--hair); background: var(--paper); border-radius: 12px; padding: 0 16px; font-size: 14px; }
+  .ghost:hover { border-color: var(--ink); }
+
+  /* 手機收合後的條件摘要 */
+  .summary { display: none; align-items: center; gap: 10px; padding: 12px 24px; border: 0; background: transparent; width: 100%; text-align: left; border-bottom: 1px solid var(--hair); }
+  .summary b { font-family: var(--serif); font-weight: 500; font-size: 17px; }
+  .summary span { color: var(--muted); font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .summary i { font-style: normal; font-size: 13px; color: var(--jade); }
+
+  /* ---------- 列表工具列 ---------- */
+  .toolbar { display: flex; align-items: center; gap: 12px; padding: 10px 24px; border-top: 1px solid var(--hair); border-bottom: 1px solid var(--hair); font-size: 13px; color: var(--muted); }
+  .toolbar .count { flex: 1; }
+  .toolbar .count b { color: var(--ink); font-weight: 500; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .switch input { appearance: none; -webkit-appearance: none; width: 28px; height: 16px; border-radius: 99px; background: var(--hair); position: relative; margin: 0; transition: background .2s; cursor: pointer; }
+  .switch input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .2s var(--ease); }
+  .switch input:checked { background: var(--jade); }
+  .switch input:checked::after { transform: translateX(12px); }
+  .toolbar select { border: 0; background: transparent; color: var(--ink); font-size: 13px; padding: 2px 0; cursor: pointer; }
+
+  /* ---------- 列表 ---------- */
+  .list { overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
+  .empty { padding: 48px 32px; text-align: center; color: var(--muted); font-size: 14px; line-height: 1.8; }
+  .empty .big { font-family: var(--serif); font-size: 20px; color: var(--ink); margin-bottom: 6px; }
+  .notice { margin: 12px 24px 0; padding: 10px 12px; border-radius: 10px; background: #f6ecea; color: var(--rose); font-size: 13px; white-space: pre-line; }
+  .err { color: var(--rose); }
+
+  .item { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; padding: 16px 24px; border-bottom: 1px solid var(--hair); cursor: pointer; transition: background .15s; }
+  .item:hover, .item.hl { background: #f8f9f7; }
+  .item .name { font-size: 16px; font-weight: 500; }
+  .item .rating { grid-row: span 2; text-align: right; align-self: center; }
+  .rating .score { font-family: var(--serif); font-size: 20px; line-height: 1; }
+  .rating .n { font-size: 11px; color: var(--muted); }
+  .line { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+  .item .line + .line { margin-top: 2px; }
+  .open { color: var(--jade); } .closed { color: var(--rose); }
+  .tag { font-size: 11px; padding: 0 6px; border-radius: 4px; background: var(--bg); color: var(--muted); }
+  .item.regular { opacity: .55; }
   .sentinel { height: 1px; }
 
-  /* 詳細頁 */
-  .detail { overflow-y: auto; flex: 1; min-height: 0; padding: 14px 16px 30px; }
-  .detail .back { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0 0 10px; }
-  .detail h2 { margin: 0 0 4px; font-size: 22px; }
-  .detail section { margin-top: 16px; }
-  .detail h3 { font-size: 14px; color: var(--muted); margin: 0 0 6px; font-weight: 600; }
-  .btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .btn { flex: 1; text-align: center; text-decoration: none; padding: 10px; border-radius: var(--radius); border: 1px solid var(--accent); color: var(--accent); font-weight: 600; min-width: 120px; }
-  .btn.primary { background: var(--accent); color: #fff; }
-  .hours div { display: flex; justify-content: space-between; font-size: 14px; padding: 2px 0; }
-  .hours .today { font-weight: 700; }
-  .review { border-top: 1px solid var(--line); padding: 10px 0; font-size: 14px; line-height: 1.6; }
-  .review .who { font-size: 13px; color: var(--muted); }
-  .attrib { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  /* ---------- 詳細頁 ---------- */
+  .detail { overflow-y: auto; flex: 1; min-height: 0; padding: 4px 24px 40px; animation: rise .35s var(--ease); }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .back { border: 0; background: none; color: var(--muted); padding: 12px 0; font-size: 14px; }
+  .back:hover { color: var(--ink); }
+  .detail h2 { font-family: var(--serif); font-weight: 700; font-size: 26px; line-height: 1.3; margin: 4px 0 10px; letter-spacing: .02em; }
+  .detail .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid var(--hair); }
+  .detail .hero .score { font-family: var(--serif); font-size: 44px; line-height: .9; }
+  .detail .hero .n { font-size: 12px; color: var(--muted); text-align: right; }
+  .detail .btns { display: flex; gap: 8px; margin: 18px 0 4px; }
+  .detail .btns a, .detail .btns button { flex: 1; text-align: center; text-decoration: none; padding: 11px 6px; border-radius: 12px; font-size: 14px; font-weight: 500; border: 1px solid var(--hair); background: var(--paper); color: var(--ink); }
+  .detail .btns .go { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .detail .btns [aria-pressed="true"] { background: var(--jade-soft); border-color: var(--jade); color: var(--jade); }
+  .detail section { padding: 16px 0; border-bottom: 1px solid var(--hair); }
+  .detail section:last-of-type { border-bottom: 0; }
+  .detail h3 { font-size: 12px; color: var(--muted); font-weight: 400; margin: 0 0 8px; letter-spacing: .04em; }
+  .detail a { color: var(--jade); }
+  .hours div { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; color: var(--muted); }
+  .hours .today { color: var(--ink); font-weight: 500; }
+  .review { padding: 12px 0; font-size: 14px; line-height: 1.75; }
+  .review + .review { border-top: 1px dashed var(--hair); }
+  .review .who { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .review .stars { color: var(--gold); letter-spacing: 1px; }
+  .attrib { font-size: 11px; color: var(--muted); margin-top: 12px; }
 
-  /* 設定框 */
-  dialog { border: 0; border-radius: 16px; padding: 20px; width: min(420px, 92vw); }
-  dialog::backdrop { background: rgba(0,0,0,.35); }
-  dialog input { width: 100%; font: inherit; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; margin: 8px 0 4px; }
-  dialog .row { justify-content: flex-end; margin-top: 12px; }
-
-  /* 地圖標記 */
-  .pin { background: var(--accent); color: #fff; border-radius: 999px; padding: 3px 7px; font-size: 12px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
-  .pin.closed { background: #9a8f86; }
-  .pin.sel { transform: scale(1.35); background: #7c2d12; }
-  .me { width: 18px; height: 18px; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 2px #2563eb55, 0 1px 4px rgba(0,0,0,.3); }
+  /* ---------- 地圖標記 ---------- */
+  .pin { font-family: var(--serif); background: var(--ink); color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 500; box-shadow: 0 2px 6px rgba(27,29,28,.25); transition: transform .2s var(--ease), background .2s; }
+  .pin.closed { background: #a7aca8; }
+  .pin.regular { background: #fff; color: var(--muted); box-shadow: 0 0 0 1px var(--hair); }
+  .pin.sel { background: var(--jade); color: #fff; transform: scale(1.3); }
+  .me { width: 16px; height: 16px; border-radius: 50%; background: var(--jade); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(47,93,80,.18); }
   .picking #map { cursor: crosshair; }
+  .map-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 8px 16px; border-radius: 999px; font-size: 13px; z-index: 2; }
+
+  /* ---------- 設定 ---------- */
+  dialog { border: 0; border-radius: 18px; padding: 28px; width: min(420px, 92vw); color: var(--ink); }
+  dialog::backdrop { background: rgba(27,29,28,.3); backdrop-filter: blur(2px); }
+  dialog h3 { font-family: var(--serif); font-size: 20px; margin: 0 0 4px; }
+  dialog p { margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+  dialog input { width: 100%; padding: 11px 12px; border: 1px solid var(--hair); border-radius: 10px; background: var(--bg); }
+  dialog .msg { font-size: 13px; min-height: 20px; margin-top: 6px; }
+  dialog .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  dialog .row button { padding: 9px 18px; }
 
   @media (max-width: 760px) {
-    .app { grid-template-columns: 1fr; grid-template-rows: 42dvh 1fr; }
+    .app { grid-template-columns: 1fr; grid-template-rows: 38dvh 1fr; }
     .mapwrap { order: -1; }
-    .side { border-right: 0; border-top: 1px solid var(--line); }
-    .controls { padding: 10px 12px 8px; gap: 8px; }
+    .side { box-shadow: 0 -1px 0 var(--hair); border-radius: 18px 18px 0 0; margin-top: -18px; }
+    header { padding: 18px 20px 2px; }
+    .controls { padding: 8px 20px 16px; gap: 14px; }
+    .chips { margin: 0 -20px; padding: 0 20px; }
+    .toolbar, .item { padding-left: 20px; padding-right: 20px; }
+    .detail { padding: 4px 20px 40px; }
   }
+  .side.collapsed .controls { display: none; }
+  .side.collapsed .summary { display: flex; }
+  @media (max-width: 760px) { .side.collapsed header { display: none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <div class="app" id="app">
-  <aside class="side">
-    <div class="controls">
-      <div class="title">
-        <h1>🍜 吃什麼</h1>
-        <div class="row">
-          <span class="usage" id="usage"></span>
-          <button class="chip" id="btnSettings" title="設定">⚙️</button>
+  <aside class="side" id="side">
+    <header>
+      <h1 class="brand">吃什麼</h1>
+      <div class="head-right">
+        <span class="usage" id="usage" title="今天已用的 Google 查詢次數"></span>
+        <button class="icon-btn" id="btnSettings" aria-label="設定家的位置">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <button class="summary" id="summary" aria-label="修改搜尋條件">
+      <b id="sumMain"></b><span id="sumSub"></span><i>修改</i>
+    </button>
+
+    <div class="controls" id="controls">
+      <div class="field">
+        <div class="tabs" id="originTabs" role="group" aria-label="出發地">
+          <button data-origin="home" aria-pressed="false">家</button>
+          <button data-origin="gps" aria-pressed="false">目前位置</button>
+          <button data-origin="pick" aria-pressed="false">地圖選點</button>
+        </div>
+        <div class="origin-now" id="originLabel">選一個出發地</div>
+      </div>
+
+      <div class="field">
+        <span class="label">怎麼去，多遠都可以</span>
+        <div class="tabs" id="modeTabs" role="group" aria-label="交通方式">
+          <button data-mode="scooter" aria-pressed="true">機車</button>
+          <button data-mode="car" aria-pressed="false">汽車</button>
+          <button data-mode="bike" aria-pressed="false">腳踏車</button>
+          <button data-mode="walk" aria-pressed="false">走路</button>
+        </div>
+        <div class="reach">
+          <input type="range" id="minutes" min="5" max="30" step="5" value="15" aria-label="可接受的時間">
+          <span class="reach-num" id="minutesNum">15</span><span class="reach-unit">分鐘</span>
         </div>
       </div>
 
-      <div class="row">
-        <button class="chip" data-origin="home">🏠 家</button>
-        <button class="chip" data-origin="gps">📍 目前位置</button>
-        <button class="chip" data-origin="pick">🗺️ 地圖上選</button>
-      </div>
-      <div class="origin-label" id="originLabel">還沒選起點</div>
-
-      <div class="seg" id="modeSeg">
-        <button data-mode="scooter" class="on">🛵 機車</button>
-        <button data-mode="car">🚗 汽車</button>
-        <button data-mode="bike">🚲 腳踏車</button>
-        <button data-mode="walk">🚶 走路</button>
+      <div class="field">
+        <span class="label">想吃什麼</span>
+        <div class="chips" id="cuisineChips" role="group" aria-label="料理"></div>
+        <div class="chips" id="formChips" role="group" aria-label="形式"></div>
       </div>
 
-      <div class="slider">
-        <span>時間</span>
-        <input type="range" id="minutes" min="5" max="30" step="5" value="15">
-        <b id="minutesLabel">15 分鐘</b>
-      </div>
-
-      <button class="go" id="btnSearch" disabled>搜尋範圍內的店</button>
-
-      <div class="toolbar">
-        <span id="count"></span>
-        <span class="row">
-          <label class="check"><input type="checkbox" id="openOnly" checked> 只看營業中</label>
-          <select id="sortBy">
-            <option value="score">推薦</option>
-            <option value="rating">評分高</option>
-            <option value="distance">距離近</option>
-            <option value="reviews">評論多</option>
-          </select>
-        </span>
+      <div class="actions">
+        <button class="primary" id="btnSearch" disabled>找餐廳</button>
       </div>
     </div>
 
+    <div class="toolbar" id="toolbar" hidden>
+      <span class="count" id="count"></span>
+      <label class="switch"><input type="checkbox" id="openOnly" checked> 營業中</label>
+      <select id="sortBy" aria-label="排序">
+        <option value="score">推薦</option>
+        <option value="rating">評分</option>
+        <option value="distance">最近</option>
+        <option value="reviews">評論數</option>
+      </select>
+      <select id="regularMode" aria-label="常去的店">
+        <option value="last">常去放最後</option>
+        <option value="hide">隱藏常去</option>
+        <option value="none">常去照常排</option>
+      </select>
+      <button class="ghost" id="btnRandom" style="padding:4px 10px;font-size:13px">隨機</button>
+    </div>
+
     <div class="list" id="list">
-      <div class="msg">選好起點、交通方式和時間，按「搜尋」就會列出範圍內的店。</div>
+      <div class="empty"><div class="big">今天吃點不一樣的</div>選好出發地和時間，看看騎得到的地方有哪些店。</div>
     </div>
     <div class="detail" id="detail" hidden></div>
   </aside>
 
-  <main class="mapwrap"><div id="map"></div></main>
+  <main class="mapwrap"><div id="map"></div><div class="map-hint" id="mapHint" hidden>在地圖上點一下出發地</div></main>
 </div>
 
 <dialog id="settings">
-  <h3 style="margin:0 0 6px">設定「家」的位置</h3>
-  <div style="font-size:13px;color:#7a6f66">輸入地址，只會存在這台裝置上。</div>
-  <input id="homeInput" placeholder="例如：新竹縣湖口鄉○○路○號">
-  <div id="settingsMsg" style="font-size:13px;min-height:18px"></div>
+  <h3>家在哪裡</h3>
+  <p>輸入地址，只會存在這台裝置上。</p>
+  <input id="homeInput" placeholder="例如：新竹縣湖口鄉○○路○號" autocomplete="street-address">
+  <div class="msg" id="settingsMsg"></div>
   <div class="row">
-    <button class="chip" id="btnCancel">取消</button>
-    <button class="chip on" id="btnSaveHome">儲存</button>
+    <button class="ghost" id="btnCancel">取消</button>
+    <button class="primary" id="btnSaveHome" style="flex:none">儲存</button>
   </div>
 </dialog>
 
 <script>
-// ============== 設定（部署前修改這裡） ==============
+// ============== 設定 ==============
 const CONFIG = {
-  WORKER_URL: 'https://food-finder.b10711042.workers.dev',  // Cloudflare Worker 網址
-  MAPS_KEY:   'AIzaSyDEPmNeHm7B3qe2FLJDUn6aRgI8pMCKBms',                         // 只限 Maps JavaScript API + 你的網址
+  WORKER_URL: 'https://food-finder.b10711042.workers.dev',
+  MAPS_KEY:   'AIzaSyDEPmNeHm7B3qe2FLJDUn6aRgI8pMCKBms',
   MAP_ID:     'DEMO_MAP_ID',
 };
-// 各交通方式的平均速度（km/h），用來估算每家店大概要騎幾分鐘
-const SPEED = { scooter: 30, car: 30, bike: 13, walk: 4.5 };
-const ROAD_FACTOR = 1.3;   // 直線距離換算成實際道路距離
-const MAX_CELLS_PER_SIDE = 3; // 大範圍最多切 3x3 格，避免一次用太多搜尋次數
+const SPEED = { scooter: 30, car: 30, bike: 13, walk: 4.5 };   // km/h，估算單店時間用
+const MODE_NAME = { scooter: '機車', car: '汽車', bike: '腳踏車', walk: '走路' };
+const ROAD_FACTOR = 1.3;
+const MAX_CELLS_PER_SIDE = 3;
 const PAGE_SIZE = 20;
 
+// 種類：料理 × 形式 → 組成 Google 搜尋字
+const CUISINES = [
+  { id: '', name: '不限' }, { id: 'tw', name: '台式', q: '台式' }, { id: 'jp', name: '日式', q: '日式' },
+  { id: 'kr', name: '韓式', q: '韓式' }, { id: 'cn', name: '中式', q: '中式' }, { id: 'hk', name: '港式', q: '港式' },
+  { id: 'th', name: '泰式', q: '泰式' }, { id: 'vn', name: '越式', q: '越南' }, { id: 'us', name: '美式', q: '美式' },
+  { id: 'it', name: '義式', q: '義式' }, { id: 'in', name: '印度', q: '印度' },
+];
+const FORMS = [
+  { id: '', name: '不限' }, { id: 'rice', name: '飯', q: '飯' }, { id: 'noodle', name: '麵', q: '麵' },
+  { id: 'pot', name: '火鍋', q: '火鍋' }, { id: 'bento', name: '便當', q: '便當' }, { id: 'brunch', name: '早午餐', q: '早午餐' },
+  { id: 'snack', name: '小吃', q: '小吃' }, { id: 'bbq', name: '燒烤', q: '燒烤' }, { id: 'dessert', name: '甜點', q: '甜點' },
+  { id: 'cafe', name: '咖啡', q: '咖啡廳' }, { id: 'veg', name: '素食', q: '素食' },
+];
+
 // ============== 狀態 ==============
-const state = {
-  origin: null, mode: 'scooter', minutes: 15,
-  polygon: null,          // [[lat,lng], ...] 外框
-  places: new Map(),      // id → place
-  sorted: [], shown: 0, selectedId: null, picking: false,
-};
-let map, polyLayer, originMarker, markers = new Map(), AdvancedMarker;
-const $ = id => document.getElementById(id);
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
+const state = {
+  origin: null, originKind: null, mode: store.get('mode', 'scooter'), minutes: store.get('minutes', 15),
+  cuisine: store.get('cuisine', ''), form: store.get('form', ''),
+  polygon: null, places: new Map(), sorted: [], shown: 0, selectedId: null, picking: false,
+  regulars: new Set(store.get('regulars', [])),   // 常去的店
+  searchedLabel: '',
+};
+let map, polyLayer, originMarker, markers = new Map(), AdvancedMarker;
+const $ = id => document.getElementById(id);
+const isMobile = () => matchMedia('(max-width: 760px)').matches;
 
 // ============== API ==============
 async function api(path, body) {
   const r = await fetch(CONFIG.WORKER_URL + path, body ? {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   } : {});
-  const data = await r.json().catch(() => ({ error: `連線錯誤 ${r.status}` }));
+  const data = await r.json().catch(() => ({ error: `連線失敗（${r.status}），請檢查網路後再試一次。` }));
   if (!r.ok) { const e = new Error(data.error || `錯誤 ${r.status}`); e.code = data.code; throw e; }
   return data;
 }
 async function refreshUsage() {
   try {
     const u = await api('/usage');
-    $('usage').textContent = `今日搜尋 ${u.search.used}/${u.search.limit}・詳細 ${u.detail.used}/${u.detail.limit}`;
+    $('usage').textContent = `${u.search.limit - u.search.used} 次搜尋可用`;
   } catch { $('usage').textContent = ''; }
 }
 
 // ============== 地圖 ==============
 function loadMaps() {
   const s = document.createElement('script');
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(CONFIG.MAPS_KEY)}` +
-          `&v=weekly&libraries=marker&language=zh-TW&region=TW&loading=async&callback=initMap`;
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(CONFIG.MAPS_KEY)}&v=weekly&libraries=marker&language=zh-TW&region=TW&loading=async&callback=initMap`;
   s.async = true;
-  s.onerror = () => showMsg('地圖載入失敗，請檢查 MAPS_KEY 設定。', true);
+  s.onerror = () => showEmpty('地圖載入失敗', '請確認網路連線後重新整理。');
   document.head.appendChild(s);
 }
 window.initMap = async function () {
   ({ AdvancedMarkerElement: AdvancedMarker } = await google.maps.importLibrary('marker'));
   const home = store.get('home');
   map = new google.maps.Map($('map'), {
-    center: home ? { lat: home.lat, lng: home.lng } : { lat: 24.80, lng: 120.97 },
-    zoom: 13, mapId: CONFIG.MAP_ID, clickableIcons: false,
-    mapTypeControl: false, streetViewControl: false, fullscreenControl: false,
-    gestureHandling: 'greedy',
+    center: home ? { lat: home.lat, lng: home.lng } : { lat: 24.83, lng: 121.0 },
+    zoom: 14, mapId: CONFIG.MAP_ID, clickableIcons: false, disableDefaultUI: true,
+    zoomControl: !isMobile(), gestureHandling: 'greedy',
   });
   map.addListener('click', e => {
     if (!state.picking) return;
-    state.picking = false; $('app').classList.remove('picking');
-    setOrigin({ lat: e.latLng.lat(), lng: e.latLng.lng(), label: '地圖上選的位置' });
+    stopPicking();
+    setOrigin({ lat: e.latLng.lat(), lng: e.latLng.lng(), label: '地圖上選的位置' }, 'pick');
   });
-  if (home) setOrigin({ lat: home.lat, lng: home.lng, label: '🏠 ' + home.address });
+  if (home) setOrigin({ lat: home.lat, lng: home.lng, label: home.address }, 'home');
 };
 
-function setOrigin(o) {
-  state.origin = o;
-  $('originLabel').textContent = '起點：' + o.label;
+function setOrigin(o, kind) {
+  state.origin = o; state.originKind = kind;
+  pressed($('originTabs'), b => b.dataset.origin === kind);
+  $('originLabel').textContent = o.label;
   $('btnSearch').disabled = false;
   if (!map) return;
   const el = document.createElement('div'); el.className = 'me';
@@ -239,23 +356,22 @@ function setOrigin(o) {
   originMarker = new AdvancedMarker({ map, position: { lat: o.lat, lng: o.lng }, content: el, zIndex: 999 });
   map.panTo({ lat: o.lat, lng: o.lng });
 }
+function stopPicking() { state.picking = false; $('app').classList.remove('picking'); $('mapHint').hidden = true; }
 
 function drawPolygon(rings) {
   if (polyLayer) polyLayer.setMap(null);
   polyLayer = new google.maps.Polygon({
     map, paths: rings.map(r => r.map(([lat, lng]) => ({ lat, lng }))),
-    strokeColor: '#c2410c', strokeWeight: 2, fillColor: '#c2410c', fillOpacity: 0.08, clickable: false,
+    strokeColor: '#2f5d50', strokeWeight: 1.5, strokeOpacity: .9, fillColor: '#2f5d50', fillOpacity: 0.06, clickable: false,
   });
   const b = new google.maps.LatLngBounds();
-  rings[0].forEach(([lat, lng]) => b.extend({ lat, lng }));
-  map.fitBounds(b, 30);
+  rings.flat().forEach(([lat, lng]) => b.extend({ lat, lng }));
+  map.fitBounds(b, 24);
 }
 
 // ============== 幾何 ==============
-// GeoJSON（[lng,lat]）→ 外框環 [[lat,lng]]
 function ringsFromGeometry(g) {
   const polys = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates];
-  // 只取每個多邊形的外框
   return polys.map(p => p[0].map(([lng, lat]) => [lat, lng]));
 }
 function inRing([lat, lng], ring) {
@@ -273,39 +389,34 @@ function distKm(a, b) {
   const s = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
 }
-// 把範圍切成格子，每格用一個圓形搜尋（Google 每次最多回 20 家）
 function gridCells(rings) {
   const pts = rings.flat();
   const lats = pts.map(p => p[0]), lngs = pts.map(p => p[1]);
-  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
-  const midLat = (minLat + maxLat) / 2;
-  const kmLat = 111.32, kmLng = 111.32 * Math.cos(midLat * Math.PI / 180);
-  const hKm = (maxLat - minLat) * kmLat, wKm = (maxLng - minLng) * kmLng;
-  const n = Math.min(MAX_CELLS_PER_SIDE, Math.max(1, Math.ceil(Math.max(hKm, wKm) / 3)));
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats), minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const kmLat = 111.32, kmLng = 111.32 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180);
+  const n = Math.min(MAX_CELLS_PER_SIDE, Math.max(1, Math.ceil(Math.max((maxLat - minLat) * kmLat, (maxLng - minLng) * kmLng) / 3)));
   const stepLat = (maxLat - minLat) / n, stepLng = (maxLng - minLng) / n;
   const radiusKm = 0.75 * Math.max(stepLat * kmLat, stepLng * kmLng);
   const cells = [];
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
     const c = [minLat + (i + 0.5) * stepLat, minLng + (j + 0.5) * stepLng];
-    const touches = inRings(c, rings) || pts.some(p => distKm(c, p) < radiusKm);
-    if (touches) cells.push({ lat: +c[0].toFixed(4), lng: +c[1].toFixed(4), radius: Math.round(radiusKm * 1000) });
+    if (inRings(c, rings) || pts.some(p => distKm(c, p) < radiusKm))
+      cells.push({ lat: +c[0].toFixed(4), lng: +c[1].toFixed(4), radius: Math.round(radiusKm * 1000) });
   }
   return cells;
 }
 
-// ============== 營業時間（以台灣時間判斷） ==============
+// ============== 營業時間（台灣時間） ==============
 const WEEK = 7 * 1440;
+const pad = n => String(n).padStart(2, '0');
+const DAY = ['日', '一', '二', '三', '四', '五', '六'];
 function taipeiNow() {
   const d = new Date(Date.now() + 8 * 3600e3);
   return { day: d.getUTCDay(), mins: d.getUTCDay() * 1440 + d.getUTCHours() * 60 + d.getUTCMinutes() };
 }
-const pad = n => String(n).padStart(2, '0');
-const DAY = ['日', '一', '二', '三', '四', '五', '六'];
 function openStatus(hours, now = taipeiNow()) {
   const periods = hours && hours.periods;
   if (!periods || !periods.length) return { known: false };
-  // 24 小時營業：只有開始、沒有結束
   if (periods.length === 1 && !periods[0].close) return { known: true, open: true, text: '24 小時營業' };
   let best = null, next = null;
   for (const p of periods) {
@@ -313,28 +424,38 @@ function openStatus(hours, now = taipeiNow()) {
     const o = p.open.day * 1440 + p.open.hour * 60 + p.open.minute;
     let c = p.close.day * 1440 + p.close.hour * 60 + p.close.minute;
     if (c <= o) c += WEEK;
-    for (const t of [now.mins, now.mins + WEEK]) {
-      if (t >= o && t < c) best = { close: p.close, left: c - t };
-    }
+    for (const t of [now.mins, now.mins + WEEK]) if (t >= o && t < c) best = { close: p.close, left: c - t };
     let wait = o - now.mins; if (wait <= 0) wait += WEEK;
     if (!next || wait < next.wait) next = { wait, open: p.open };
   }
-  if (best) return { known: true, open: true, text: `營業到 ${pad(best.close.hour)}:${pad(best.close.minute)}`, soon: best.left <= 45 };
+  if (best) return { known: true, open: true, text: best.left <= 45 ? `${best.left} 分鐘後打烊` : `營業到 ${pad(best.close.hour)}:${pad(best.close.minute)}` };
   if (next) {
-    const when = next.wait < 1440 - (now.mins % 1440) ? '今天'
-      : next.wait < 2880 - (now.mins % 1440) ? '明天' : '週' + DAY[next.open.day];
+    const left = 1440 - (now.mins % 1440);
+    const when = next.wait < left ? '今天' : next.wait < left + 1440 ? '明天' : '週' + DAY[next.open.day];
     return { known: true, open: false, text: `${when} ${pad(next.open.hour)}:${pad(next.open.minute)} 開` };
   }
   return { known: true, open: false, text: '休息中' };
 }
 
 // ============== 搜尋 ==============
+function searchQuery() {
+  const c = CUISINES.find(x => x.id === state.cuisine), f = FORMS.find(x => x.id === state.form);
+  if (!c?.q && !f?.q) return '';
+  if (c?.q && f?.q) return `${c.q} ${f.q}`;
+  return c?.q ? `${c.q}料理` : f.q;
+}
+function filterLabel() {
+  const c = CUISINES.find(x => x.id === state.cuisine), f = FORMS.find(x => x.id === state.form);
+  return [c?.id ? c.name : '', f?.id ? f.name : ''].join('') || '全部';
+}
+
 async function search() {
   if (!state.origin) return;
   const btn = $('btnSearch'); btn.disabled = true;
   closeDetail();
+  const query = searchQuery();
   try {
-    btn.textContent = '計算可到達範圍…';
+    btn.textContent = '計算騎得到的範圍';
     const iso = await api('/isochrone', { lat: state.origin.lat, lng: state.origin.lng, mode: state.mode, minutes: state.minutes });
     const rings = ringsFromGeometry(iso.geometry);
     state.polygon = rings; drawPolygon(rings);
@@ -342,24 +463,27 @@ async function search() {
     const cells = gridCells(rings);
     state.places.clear();
     let done = 0, quotaHit = null, failed = 0, lastErr = '';
+    $('toolbar').hidden = false;
     for (const c of cells) {
-      btn.textContent = `搜尋店家中… ${++done}/${cells.length}`;
+      btn.textContent = `找店中 ${++done}/${cells.length}`;
       try {
-        const res = await api('/nearby', c);
+        const res = await api(query ? '/text' : '/nearby', query ? { ...c, query } : c);
         for (const p of res.places) state.places.set(p.id, p);
       } catch (e) {
         if (e.code === 'QUOTA') { quotaHit = e.message; break; }
-        failed++; lastErr = e.message;   // 單一格失敗就跳過，繼續搜其他格
+        failed++; lastErr = e.message;
       }
       render();
     }
+    state.searchedLabel = `${MODE_NAME[state.mode]} ${state.minutes} 分鐘`;
     render();
-    if (quotaHit) toastList(quotaHit + '（目前列出的是已搜尋到的部分）');
-    else if (failed) toastList(`有 ${failed}/${cells.length} 個區塊搜尋失敗，結果可能不完整。再按一次搜尋會補查失敗的區塊（成功的區塊不會重複扣次數）。\n${lastErr}`);
+    if (quotaHit) notice(quotaHit + '\n目前列出的是已經找到的部分。');
+    else if (failed) notice(`有 ${failed} 個區塊沒找成功，結果可能不完整。再按一次「找餐廳」會補查這些區塊，已找到的不會重複扣次數。\n${lastErr}`);
+    if (state.sorted.length) collapse(true);
   } catch (e) {
-    showMsg(e.message, true);
+    showEmpty('沒找成功', e.message);
   } finally {
-    btn.disabled = false; btn.textContent = '搜尋範圍內的店';
+    btn.disabled = false; btn.textContent = '找餐廳';
     refreshUsage();
   }
 }
@@ -367,17 +491,18 @@ async function search() {
 function enrich(p) {
   const pos = [p.location.latitude, p.location.longitude];
   const km = distKm([state.origin.lat, state.origin.lng], pos);
-  const mins = Math.max(1, Math.round(km * ROAD_FACTOR / SPEED[state.mode] * 60));
-  return { ...p, _pos: pos, _km: km, _mins: mins, _status: openStatus(p.regularOpeningHours) };
+  return { ...p, _pos: pos, _km: km, _mins: Math.max(1, Math.round(km * ROAD_FACTOR / SPEED[state.mode] * 60)),
+           _status: openStatus(p.regularOpeningHours), _regular: state.regulars.has(p.id) };
 }
 
 function render() {
-  const openOnly = $('openOnly').checked, sortBy = $('sortBy').value;
+  const openOnly = $('openOnly').checked, sortBy = $('sortBy').value, regularMode = $('regularMode').value;
   let list = [...state.places.values()]
     .filter(p => p.location && (!p.businessStatus || p.businessStatus === 'OPERATIONAL'))
     .map(enrich)
     .filter(p => !state.polygon || inRings(p._pos, state.polygon))
-    .filter(p => !openOnly || p._status.open);
+    .filter(p => !openOnly || p._status.open)
+    .filter(p => regularMode !== 'hide' || !p._regular);
   const score = p => (p.rating || 0) * Math.log10((p.userRatingCount || 0) + 10);
   const sorters = {
     score: (a, b) => score(b) - score(a),
@@ -385,15 +510,16 @@ function render() {
     distance: (a, b) => a._km - b._km,
     reviews: (a, b) => (b.userRatingCount || 0) - (a.userRatingCount || 0),
   };
-  list.sort(sorters[sortBy]);
+  list.sort((a, b) => (regularMode === 'last' ? a._regular - b._regular : 0) || sorters[sortBy](a, b));
   state.sorted = list; state.shown = 0;
-  $('count').textContent = `共 ${list.length} 家`;
-  $('list').innerHTML = '';
+  $('count').innerHTML = `<b>${list.length}</b> 家`;
+  $('btnRandom').hidden = !list.length;
+  updateSummary();
+  const box = $('list'); box.innerHTML = '';
   if (!list.length) {
-    showMsg(state.places.size ? '範圍內沒有符合條件的店。可以取消「只看營業中」或拉長時間。' : '搜尋中…');
-  } else {
-    renderMore();
-  }
+    if (state.places.size) showEmpty('這個範圍沒有符合的店', openOnly ? '關掉「營業中」，或把時間拉長一點試試。' : '把時間拉長，或換個種類試試。');
+    else box.innerHTML = '<div class="empty">找店中…</div>';
+  } else renderMore();
   renderMarkers();
 }
 
@@ -401,38 +527,33 @@ function renderMore() {
   const box = $('list');
   box.querySelector('.sentinel')?.remove();
   const slice = state.sorted.slice(state.shown, state.shown + PAGE_SIZE);
-  for (const p of slice) box.appendChild(cardEl(p));
+  for (const p of slice) box.appendChild(itemEl(p));
   state.shown += slice.length;
   if (state.shown < state.sorted.length) {
     const s = document.createElement('div'); s.className = 'sentinel'; box.appendChild(s);
-    const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { io.disconnect(); renderMore(); } }, { root: box });
+    const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { io.disconnect(); renderMore(); } }, { root: box, rootMargin: '200px' });
     io.observe(s);
   }
 }
 
-function cardEl(p) {
+function itemEl(p) {
   const el = document.createElement('div');
-  el.className = 'card'; el.dataset.id = p.id;
+  el.className = 'item' + (p._regular ? ' regular' : ''); el.dataset.id = p.id;
+  el.tabIndex = 0; el.setAttribute('role', 'button');
   const st = p._status;
   el.innerHTML = `
     <div class="name"></div>
-    <div class="meta">
-      ${p.rating ? `<span><span class="star">★</span> ${p.rating.toFixed(1)} (${p.userRatingCount || 0})</span>` : '<span>尚無評分</span>'}
-      <span class="type"></span>
-      ${priceText(p.priceLevel) ? `<span>${priceText(p.priceLevel)}</span>` : ''}
-    </div>
-    <div class="meta">
-      <span>約 ${p._mins} 分鐘・${p._km.toFixed(1)} km</span>
-      <span class="${st.known ? (st.open ? 'open' : 'closed') : ''}">${st.known ? (st.open ? '● ' : '○ ') + st.text : '營業時間未知'}</span>
-    </div>`;
+    <div class="rating">${p.rating ? `<div class="score">${p.rating.toFixed(1)}</div><div class="n">${p.userRatingCount || 0} 則</div>` : '<div class="n">尚無評分</div>'}</div>
+    <div class="line"><span class="type"></span>${price(p.priceLevel) ? `<span>${price(p.priceLevel)}</span>` : ''}${p._regular ? '<span class="tag">常去</span>' : ''}</div>
+    <div class="line"><span>${p._mins} 分鐘 ${p._km.toFixed(1)} km</span><span class="${st.known ? (st.open ? 'open' : 'closed') : ''}">${st.known ? st.text : '營業時間不明'}</span></div>`;
   el.querySelector('.name').textContent = p.displayName?.text || '（無名稱）';
-  el.querySelector('.type').textContent = p.primaryTypeDisplayName?.text || '';
+  el.querySelector('.type').textContent = p.primaryTypeDisplayName?.text || '餐廳';
   el.onclick = () => openDetail(p.id);
+  el.onkeydown = e => { if (e.key === 'Enter') openDetail(p.id); };
   el.onmouseenter = () => highlight(p.id, false);
   return el;
 }
-
-function priceText(level) {
+function price(level) {
   return { PRICE_LEVEL_INEXPENSIVE: '$', PRICE_LEVEL_MODERATE: '$$', PRICE_LEVEL_EXPENSIVE: '$$$', PRICE_LEVEL_VERY_EXPENSIVE: '$$$$' }[level] || '';
 }
 
@@ -442,8 +563,8 @@ function renderMarkers() {
   if (!map) return;
   for (const p of state.sorted) {
     const el = document.createElement('div');
-    el.className = 'pin' + (p._status.open ? '' : ' closed');
-    el.textContent = p.rating ? p.rating.toFixed(1) : '•';
+    el.className = 'pin' + (p._regular ? ' regular' : p._status.open ? '' : ' closed');
+    el.textContent = p.rating ? p.rating.toFixed(1) : '·';
     const m = new AdvancedMarker({ map, position: { lat: p._pos[0], lng: p._pos[1] }, content: el, title: p.displayName?.text });
     m.addListener('click', () => openDetail(p.id));
     markers.set(p.id, m);
@@ -451,15 +572,28 @@ function renderMarkers() {
 }
 
 function highlight(id, pan) {
-  if (state.selectedId && markers.get(state.selectedId)) {
-    markers.get(state.selectedId).content.classList.remove('sel');
-    markers.get(state.selectedId).zIndex = null;
-  }
-  document.querySelectorAll('.card.hl').forEach(c => c.classList.remove('hl'));
+  const prev = markers.get(state.selectedId);
+  if (prev) { prev.content.classList.remove('sel'); prev.zIndex = null; }
+  document.querySelectorAll('.item.hl').forEach(c => c.classList.remove('hl'));
   state.selectedId = id;
   const m = markers.get(id);
   if (m) { m.content.classList.add('sel'); m.zIndex = 1000; if (pan) map.panTo(m.position); }
-  document.querySelector(`.card[data-id="${CSS.escape(id)}"]`)?.classList.add('hl');
+  document.querySelector(`.item[data-id="${CSS.escape(id)}"]`)?.classList.add('hl');
+}
+
+// ============== 隨機選一間 ==============
+function randomPick() {
+  const pool = state.sorted.filter(p => !p._regular);
+  const list = pool.length ? pool : state.sorted;
+  if (!list.length) return;
+  openDetail(list[Math.floor(Math.random() * list.length)].id);
+}
+
+// ============== 常去 ==============
+function toggleRegular(id) {
+  state.regulars.has(id) ? state.regulars.delete(id) : state.regulars.add(id);
+  store.set('regulars', [...state.regulars]);
+  return state.regulars.has(id);
 }
 
 // ============== 詳細頁 ==============
@@ -468,110 +602,132 @@ async function openDetail(id) {
   const base = state.sorted.find(p => p.id === id) || enrich(state.places.get(id));
   const box = $('detail');
   $('list').hidden = true; box.hidden = false; box.scrollTop = 0;
-  box.innerHTML = '<button class="back">← 回列表</button><div class="msg">載入中…</div>';
+  if (isMobile()) collapse(true);
+  box.innerHTML = '<button class="back">← 回列表</button><div class="empty">載入中…</div>';
   box.querySelector('.back').onclick = closeDetail;
   let d;
   try { d = await api('/details?id=' + encodeURIComponent(id)); }
   catch (e) { d = { ...base, _err: e.message }; }
   refreshUsage();
-  if (state.selectedId !== id) return;  // 使用者已經點別家
+  if (state.selectedId !== id) return;
   renderDetail(d, base);
 }
 
 function renderDetail(d, base) {
   const box = $('detail');
-  const st = openStatus(d.regularOpeningHours);
-  const name = d.displayName?.text || base.displayName?.text || '';
+  const st = openStatus(d.regularOpeningHours || base.regularOpeningHours);
   const pos = d.location ? [d.location.latitude, d.location.longitude] : base._pos;
-  const nav = `https://www.google.com/maps/dir/?api=1&destination=${pos[0]},${pos[1]}&destination_place_id=${encodeURIComponent(d.id || base.id)}&travelmode=driving`;
+  const id = d.id || base.id;
+  const nav = `https://www.google.com/maps/dir/?api=1&destination=${pos[0]},${pos[1]}&destination_place_id=${encodeURIComponent(id)}&travelmode=driving`;
   const today = taipeiNow().day;
-  // weekdayDescriptions 以星期一開頭
-  const days = d.regularOpeningHours?.weekdayDescriptions || [];
+  const days = d.regularOpeningHours?.weekdayDescriptions || [];  // 從星期一開始
+  const rating = d.rating ?? base.rating, count = d.userRatingCount ?? base.userRatingCount;
   box.innerHTML = `
     <button class="back">← 回列表</button>
     <h2></h2>
-    <div class="meta">
-      ${d.rating ? `<span><span class="star">★</span> ${d.rating.toFixed(1)}（${d.userRatingCount || 0} 則評論）</span>` : ''}
-      <span class="type"></span>
-      ${priceText(d.priceLevel) ? `<span>${priceText(d.priceLevel)}</span>` : ''}
-    </div>
-    <div class="meta" style="margin-top:4px">
-      <span>約 ${base._mins} 分鐘・${base._km.toFixed(1)} km</span>
-      <span class="${st.known ? (st.open ? 'open' : 'closed') : ''}">${st.known ? st.text : '營業時間未知'}</span>
+    <div class="hero">
+      <div class="line" style="flex-direction:column;gap:2px">
+        <span class="type" style="color:var(--ink)"></span>
+        <span>${base._mins} 分鐘 ${base._km.toFixed(1)} km ${price(d.priceLevel) ? '　' + price(d.priceLevel) : ''}</span>
+        <span class="${st.known ? (st.open ? 'open' : 'closed') : ''}">${st.known ? st.text : '營業時間不明'}</span>
+      </div>
+      ${rating ? `<div><div class="score">${rating.toFixed(1)}</div><div class="n">${count || 0} 則評論</div></div>` : ''}
     </div>
     <div class="btns">
-      <a class="btn primary" target="_blank" rel="noopener" href="${nav}">🧭 導航</a>
-      <a class="btn" target="_blank" rel="noopener" href="${esc(d.googleMapsUri || base.googleMapsUri || '#')}">看照片・Google 地圖</a>
+      <a class="go" target="_blank" rel="noopener" href="${nav}">導航</a>
+      <a target="_blank" rel="noopener" href="${esc(d.googleMapsUri || base.googleMapsUri || '#')}">照片</a>
+      <button id="btnRegular" aria-pressed="${state.regulars.has(id)}">${state.regulars.has(id) ? '常去 ✓' : '標記常去'}</button>
     </div>
-    ${d._err ? `<div class="msg err">${esc(d._err)}</div>` : ''}
-    <section><h3>地址</h3><div>${esc(d.formattedAddress || base.shortFormattedAddress || '')}</div></section>
+    ${d._err ? `<div class="notice">${esc(d._err)}</div>` : ''}
+    <section><h3>地址</h3>${esc(d.formattedAddress || base.shortFormattedAddress || '')}</section>
     ${d.nationalPhoneNumber ? `<section><h3>電話</h3><a href="tel:${esc(d.nationalPhoneNumber.replace(/\s/g, ''))}">${esc(d.nationalPhoneNumber)}</a></section>` : ''}
-    ${d.websiteUri ? `<section><h3>網站</h3><a target="_blank" rel="noopener" href="${esc(d.websiteUri)}">${esc(d.websiteUri.replace(/^https?:\/\//, '').slice(0, 40))}</a></section>` : ''}
     ${days.length ? `<section><h3>營業時間</h3><div class="hours">${days.map((t, i) => {
-        const isToday = (i + 1) % 7 === today; const [k, ...v] = t.split(/[:：]\s*/);
-        return `<div class="${isToday ? 'today' : ''}"><span>${esc(k)}</span><span>${esc(v.join(':'))}</span></div>`;
+        const [k, ...v] = t.split(/[:：]\s*/);
+        return `<div class="${(i + 1) % 7 === today ? 'today' : ''}"><span>${esc(k)}</span><span>${esc(v.join(':'))}</span></div>`;
       }).join('')}</div></section>` : ''}
+    ${d.websiteUri ? `<section><h3>網站</h3><a target="_blank" rel="noopener" href="${esc(d.websiteUri)}">${esc(d.websiteUri.replace(/^https?:\/\/(www\.)?/, '').slice(0, 42))}</a></section>` : ''}
     ${d.reviews?.length ? `<section><h3>評論</h3>${d.reviews.map(r => `
       <div class="review">
-        <div class="who"><span class="star">${'★'.repeat(r.rating || 0)}</span> ${esc(r.authorAttribution?.displayName || '')}・${esc(r.relativePublishTimeDescription || '')}</div>
+        <div class="who"><span class="stars">${'★'.repeat(r.rating || 0)}</span>　${esc(r.authorAttribution?.displayName || '')}　${esc(r.relativePublishTimeDescription || '')}</div>
         <div>${esc(r.text?.text || r.originalText?.text || '')}</div>
       </div>`).join('')}</section>` : ''}
     <div class="attrib">資料來源：Google</div>`;
-  box.querySelector('h2').textContent = name;
-  box.querySelector('.type').textContent = d.primaryTypeDisplayName?.text || base.primaryTypeDisplayName?.text || '';
+  box.querySelector('h2').textContent = d.displayName?.text || base.displayName?.text || '';
+  box.querySelector('.type').textContent = d.primaryTypeDisplayName?.text || base.primaryTypeDisplayName?.text || '餐廳';
   box.querySelector('.back').onclick = closeDetail;
+  $('btnRegular').onclick = e => {
+    const on = toggleRegular(id);
+    e.target.setAttribute('aria-pressed', on); e.target.textContent = on ? '常去 ✓' : '標記常去';
+    render(); highlight(id, false);
+  };
 }
+function closeDetail() { $('detail').hidden = true; $('list').hidden = false; }
 
-function closeDetail() {
-  $('detail').hidden = true; $('list').hidden = false;
-}
-
-// ============== 介面小工具 ==============
+// ============== 介面 ==============
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function showMsg(text, err) {
+function showEmpty(title, text) {
   closeDetail();
-  $('list').innerHTML = `<div class="msg ${err ? 'err' : ''}">${esc(text)}</div>`;
+  $('list').innerHTML = `<div class="empty"><div class="big">${esc(title)}</div><span class="${title === '沒找成功' ? 'err' : ''}">${esc(text)}</span></div>`;
 }
-function toastList(text) {
-  const d = document.createElement('div'); d.className = 'msg err'; d.textContent = text;
+function notice(text) {
+  const d = document.createElement('div'); d.className = 'notice'; d.textContent = text;
   $('list').prepend(d);
 }
+function pressed(group, test) { group.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', test(b))); }
+function collapse(on) { $('side').classList.toggle('collapsed', on); }
+function updateSummary() {
+  $('sumMain').textContent = filterLabel();
+  $('sumSub').textContent = `${state.searchedLabel || MODE_NAME[state.mode] + ' ' + state.minutes + ' 分鐘'}，從${state.originKind === 'home' ? '家' : state.originKind === 'gps' ? '目前位置' : '選的地點'}出發`;
+}
 
-// 起點按鈕
-document.querySelectorAll('[data-origin]').forEach(b => b.onclick = () => {
+function buildChips(box, items, key) {
+  box.innerHTML = '';
+  for (const it of items) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = it.name; b.dataset.id = it.id;
+    b.setAttribute('aria-pressed', state[key] === it.id);
+    b.onclick = () => { state[key] = it.id; store.set(key, it.id); pressed(box, x => x.dataset.id === it.id); updateSummary(); };
+    box.appendChild(b);
+  }
+}
+
+// 出發地
+$('originTabs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
   const kind = b.dataset.origin;
   if (kind === 'home') {
     const home = store.get('home');
     if (!home) return openSettings();
-    setOrigin({ lat: home.lat, lng: home.lng, label: '🏠 ' + home.address });
+    setOrigin({ lat: home.lat, lng: home.lng, label: home.address }, 'home');
   } else if (kind === 'gps') {
-    if (!navigator.geolocation) return alert('這個瀏覽器不支援定位');
+    if (!navigator.geolocation) return ($('originLabel').textContent = '這個瀏覽器無法定位，請改用地圖選點。');
     $('originLabel').textContent = '定位中…';
     navigator.geolocation.getCurrentPosition(
-      pos => setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: '📍 目前位置' }),
-      err => { $('originLabel').textContent = '定位失敗：' + err.message; },
+      pos => setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: '目前位置' }, 'gps'),
+      () => { $('originLabel').textContent = '定位沒有成功。請允許瀏覽器使用位置，或改用地圖選點。'; },
       { enableHighAccuracy: true, timeout: 10000 });
   } else {
-    state.picking = true; $('app').classList.add('picking');
-    $('originLabel').textContent = '請在地圖上點一下起點';
+    state.picking = true; $('app').classList.add('picking'); $('mapHint').hidden = false;
+    $('originLabel').textContent = '在地圖上點一下出發地';
   }
-});
-
-// 交通方式、時間
-$('modeSeg').onclick = e => {
+};
+$('modeTabs').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  $('modeSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
   state.mode = b.dataset.mode; store.set('mode', state.mode);
+  pressed($('modeTabs'), x => x === b);
 };
 $('minutes').oninput = e => {
-  state.minutes = +e.target.value; $('minutesLabel').textContent = state.minutes + ' 分鐘';
+  state.minutes = +e.target.value; $('minutesNum').textContent = state.minutes;
   store.set('minutes', state.minutes);
 };
 $('btnSearch').onclick = search;
 $('openOnly').onchange = render;
 $('sortBy').onchange = render;
+$('regularMode').onchange = () => { store.set('regularMode', $('regularMode').value); render(); };
+$('btnRandom').onclick = randomPick;
+$('summary').onclick = () => { collapse(false); closeDetail(); };
 
-// 設定「家」
+// 設定家
 function openSettings() {
   $('homeInput').value = store.get('home')?.address || '';
   $('settingsMsg').textContent = '';
@@ -586,20 +742,17 @@ $('btnSaveHome').onclick = async () => {
     const g = await api('/geocode', { text });
     store.set('home', { lat: g.lat, lng: g.lng, address: text });
     $('settings').close();
-    setOrigin({ lat: g.lat, lng: g.lng, label: '🏠 ' + text });
+    setOrigin({ lat: g.lat, lng: g.lng, label: text }, 'home');
     refreshUsage();
-  } catch (e) { $('settingsMsg').textContent = e.message; }
+  } catch (e) { $('settingsMsg').innerHTML = `<span class="err">${esc(e.message)}</span>`; }
 };
 
-// 還原上次設定
-(() => {
-  const mode = store.get('mode'); if (mode && SPEED[mode]) {
-    state.mode = mode;
-    $('modeSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.mode === mode));
-  }
-  const min = store.get('minutes'); if (min) { state.minutes = min; $('minutes').value = min; $('minutesLabel').textContent = min + ' 分鐘'; }
-})();
-
+// 初始化
+buildChips($('cuisineChips'), CUISINES, 'cuisine');
+buildChips($('formChips'), FORMS, 'form');
+pressed($('modeTabs'), b => b.dataset.mode === state.mode);
+$('minutes').value = state.minutes; $('minutesNum').textContent = state.minutes;
+$('regularMode').value = store.get('regularMode', 'last');
 loadMaps();
 refreshUsage();
 </script>

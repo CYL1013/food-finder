@@ -1,4 +1,4 @@
-// =============================================================  (v1.1)
+// =============================================================  (v1.2)
 //  吃什麼 Food Finder — 後端（Cloudflare Worker）
 //  作用：藏住 API 金鑰、快取結果、每日次數上限（確保不超過免費額度）
 //
@@ -54,6 +54,7 @@ export default {
         case '/geocode':   result = await geocode(await req.json(), env); break;
         case '/isochrone': result = await isochrone(await req.json(), env); break;
         case '/nearby':    result = await nearby(await req.json(), env); break;
+        case '/text':      result = await textSearch(await req.json(), env); break;
         case '/details':   result = await details(url.searchParams.get('id'), env); break;
         default: return json({ error: '找不到這個功能' }, 404, cors);
       }
@@ -142,6 +143,38 @@ async function nearby({ lat, lng, radius }, env) {
       languageCode: 'zh-TW',
       regionCode: 'TW',
       locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius } },
+    }),
+  });
+  const data = await googleJson(r);
+  await commit();
+  const places = data.places || [];
+  await env.KV.put(key, JSON.stringify(places), { expirationTtl: PLACE_CACHE_TTL });
+  return { places, cached: false };
+}
+
+// 依關鍵字搜尋一個區域內的店家（種類篩選用，例如「日式 飯」）
+async function textSearch({ query, lat, lng, radius }, env) {
+  query = String(query || '').trim().slice(0, 40);
+  if (!query) throw httpError(400, '缺少搜尋關鍵字');
+  radius = Math.max(200, Math.min(50000, Math.round(radius)));
+  const key = `tx:${query}:${round(lat)}:${round(lng)}:${Math.round(radius / 100) * 100}`;
+  const hit = await env.KV.get(key, 'json');
+  if (hit) return { places: hit, cached: true };
+
+  const commit = await takeQuota(env, 'search', DAILY_SEARCH_LIMIT);
+  const dLat = radius / 111320, dLng = radius / (111320 * Math.cos(lat * Math.PI / 180));
+  const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: googleHeaders(env, NEARBY_FIELDS),
+    body: JSON.stringify({
+      textQuery: query,
+      pageSize: 20,
+      languageCode: 'zh-TW',
+      regionCode: 'TW',
+      locationRestriction: { rectangle: {
+        low:  { latitude: lat - dLat, longitude: lng - dLng },
+        high: { latitude: lat + dLat, longitude: lng + dLng },
+      } },
     }),
   });
   const data = await googleJson(r);
