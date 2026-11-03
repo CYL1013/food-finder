@@ -83,13 +83,14 @@ async function geocode({ text }, env) {
   const hit = await env.KV.get(key, 'json');
   if (hit) return hit;
 
-  await takeQuota(env, 'search', DAILY_SEARCH_LIMIT);
+  const commit = await takeQuota(env, 'search', DAILY_SEARCH_LIMIT);
   const r = await fetch('https://places.googleapis.com/v1/places:searchText', {
     method: 'POST',
     headers: googleHeaders(env, 'places.location,places.formattedAddress'),
     body: JSON.stringify({ textQuery: text, languageCode: 'zh-TW', regionCode: 'TW', pageSize: 1 }),
   });
   const data = await googleJson(r);
+  await commit();
   const p = data.places && data.places[0];
   if (!p) throw httpError(404, '找不到這個地址，請換個寫法試試');
   const out = { lat: p.location.latitude, lng: p.location.longitude, address: p.formattedAddress };
@@ -130,7 +131,7 @@ async function nearby({ lat, lng, radius }, env) {
   const hit = await env.KV.get(key, 'json');
   if (hit) return { places: hit, cached: true };
 
-  await takeQuota(env, 'search', DAILY_SEARCH_LIMIT);
+  const commit = await takeQuota(env, 'search', DAILY_SEARCH_LIMIT);
   const r = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
     method: 'POST',
     headers: googleHeaders(env, NEARBY_FIELDS),
@@ -144,6 +145,7 @@ async function nearby({ lat, lng, radius }, env) {
     }),
   });
   const data = await googleJson(r);
+  await commit();
   const places = data.places || [];
   await env.KV.put(key, JSON.stringify(places), { expirationTtl: PLACE_CACHE_TTL });
   return { places, cached: false };
@@ -156,17 +158,19 @@ async function details(id, env) {
   const hit = await env.KV.get(key, 'json');
   if (hit) return { ...hit, cached: true };
 
-  await takeQuota(env, 'detail', DAILY_DETAIL_LIMIT);
+  const commit = await takeQuota(env, 'detail', DAILY_DETAIL_LIMIT);
   const r = await fetch(`https://places.googleapis.com/v1/places/${id}?languageCode=zh-TW&regionCode=TW`, {
     headers: googleHeaders(env, DETAIL_FIELDS),
   });
   const data = await googleJson(r);
+  await commit();
   await env.KV.put(key, JSON.stringify(data), { expirationTtl: PLACE_CACHE_TTL });
   return data;
 }
 
 // ---------- 工具 ----------
 
+// 先檢查是否還有次數；Google 呼叫成功後才扣次數（失敗的呼叫 Google 不收費）
 async function takeQuota(env, kind, limit) {
   const key = `quota:${kind}:${taipeiDate()}`;
   const used = parseInt(await env.KV.get(key) || '0', 10);
@@ -174,7 +178,7 @@ async function takeQuota(env, kind, limit) {
     const label = kind === 'search' ? '搜尋' : '店家詳細資訊';
     throw httpError(429, `今天的${label}次數已用完（${limit} 次），明天再試。已查過的區域仍可使用。`, 'QUOTA');
   }
-  await env.KV.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 });
+  return () => env.KV.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 });
 }
 
 function googleHeaders(env, fieldMask) {
