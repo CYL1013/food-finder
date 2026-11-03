@@ -1,0 +1,12 @@
+# Cloudflare Worker 設定（Cloudflare 連動 GitHub 時自動部署用）
+# 金鑰 GOOGLE_KEY、ORS_KEY 是 Secret，存在 Cloudflare 後台，不放這裡
+name = "food-finder"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+ALLOWED_ORIGIN = "https://cyl1013.github.io"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "21987a748cf94bcbb1fbf3c80c203de4"
