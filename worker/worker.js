@@ -188,8 +188,11 @@ function googleHeaders(env, fieldMask) {
 async function googleJson(r) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
-    const msg = (data.error && data.error.message) || `HTTP ${r.status}`;
-    throw httpError(502, `Google 回傳錯誤：${msg}`);
+    const err = data.error || {};
+    const reasons = (err.details || []).map(d => d.reason).filter(Boolean);
+    const msg = err.message || `HTTP ${r.status}`;
+    const tag = [err.status, ...reasons].filter(Boolean).join(' / ');
+    throw httpError(502, `Google 回傳錯誤：${msg}${tag ? `（${tag}）` : ''}`);
   }
   return data;
 }
