@@ -47,7 +47,7 @@
   /* 列表 */
   .list { overflow-y: auto; flex: 1; min-height: 0; }
   .msg { padding: 24px 18px; color: var(--muted); text-align: center; line-height: 1.6; }
-  .msg.err { color: var(--closed); }
+  .msg.err { color: var(--closed); white-space: pre-line; }
   .card { padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; display: grid; gap: 3px; }
   .card:hover, .card.hl { background: #fbf6ef; }
   .card .name { font-weight: 600; font-size: 16px; }
@@ -341,7 +341,7 @@ async function search() {
 
     const cells = gridCells(rings);
     state.places.clear();
-    let done = 0, quotaHit = null;
+    let done = 0, quotaHit = null, failed = 0, lastErr = '';
     for (const c of cells) {
       btn.textContent = `搜尋店家中… ${++done}/${cells.length}`;
       try {
@@ -349,12 +349,13 @@ async function search() {
         for (const p of res.places) state.places.set(p.id, p);
       } catch (e) {
         if (e.code === 'QUOTA') { quotaHit = e.message; break; }
-        throw e;
+        failed++; lastErr = e.message;   // 單一格失敗就跳過，繼續搜其他格
       }
       render();
     }
     render();
     if (quotaHit) toastList(quotaHit + '（目前列出的是已搜尋到的部分）');
+    else if (failed) toastList(`有 ${failed}/${cells.length} 個區塊搜尋失敗，結果可能不完整。再按一次搜尋會補查失敗的區塊（成功的區塊不會重複扣次數）。\n${lastErr}`);
   } catch (e) {
     showMsg(e.message, true);
   } finally {
